@@ -303,19 +303,33 @@ const server = http.createServer(async (req, res) => {
 
   const urlPath = req.url.split('?')[0]
 
-  // 1) 和风 API 代理
+  // 1) API 状态检查端点（前端用来判断后端代理是否可用）
+  if (urlPath === '/api-status') {
+    const distExists = fs.existsSync(DIST_DIR)
+    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+    return res.end(JSON.stringify({
+      ok: true,
+      distExists,
+      qwKeyConfigured: !!process.env.QW_API_KEY,
+      port: PORT,
+      env: process.env.NODE_ENV || 'development',
+      timestamp: Date.now(),
+    }))
+  }
+
+  // 2) 和风 API 代理
   const route = matchApiRoute(urlPath)
   if (route) {
     return proxyToQWeather(req, res, route)
   }
 
-  // 2) 健康检查端点（方便运维监控）
+  // 3) 健康检查端点（方便运维监控）
   if (urlPath === '/healthz') {
     res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
     return res.end(JSON.stringify({ ok: true, ts: Date.now(), env: process.env.NODE_ENV || 'development' }))
   }
 
-  // 3) 静态文件 / 回退 Vite
+  // 4) 静态文件 / 回退 Vite
   serveStaticOrFallback(req, res)
 })
 

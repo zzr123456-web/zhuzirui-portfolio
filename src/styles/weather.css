@@ -108,6 +108,25 @@
   border-radius: 8px;
 }
 
+/* ===== 后端不可用警告条 ===== */
+.weather-backend-warning {
+  background: rgba(255, 152, 0, 0.2);
+  border: 1px solid rgba(255, 152, 0, 0.5);
+  border-radius: 12px;
+  padding: 14px 18px;
+  color: #fff;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.weather-backend-warning code {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
 /* ===== 响应式微调 ===== */
 @media (max-width: 600px) {
   .weather-container {

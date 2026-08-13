@@ -13,7 +13,7 @@ import '../styles/weather.css'
 export default function WeatherPage() {
   const {
     search, setSearch, results, showResults, setShowResults,
-    city, weather, loading, error, selectCity,
+    city, weather, loading, error, backendReady, selectCity,
   } = useWeather()
 
   // 和风实时天气的 icon code，用于动态背景（找不到就 fallback 到 cloud）
@@ -36,6 +36,16 @@ export default function WeatherPage() {
           </h1>
           <span className="text-white/70 text-xs font-mono w-16 text-right">和风天气</span>
         </header>
+
+        {/* 后端不可用警告 */}
+        {backendReady === false && (
+          <div className="weather-backend-warning mb-4">
+            <p>⚠️ 天气服务暂时不可用</p>
+            <p className="text-xs opacity-80 mt-1">
+              后端代理未运行，请确保以 <code>node server.js</code> 启动，而不是纯静态部署
+            </p>
+          </div>
+        )}
 
         {/* 搜索框 */}
         <SearchBar

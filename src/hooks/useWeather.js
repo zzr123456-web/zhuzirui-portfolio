@@ -11,6 +11,9 @@ import { QW_ERROR_MESSAGES } from '../utils/qweatherUtils.js'
  */
 const API_PREFIX = '/api/qw'
 
+// 后端 API 状态检查端点
+const API_STATUS_URL = '/api-status'
+
 /**
  * 常见外国城市 中文 → 英文 映射表
  *
@@ -187,7 +190,29 @@ export default function useWeather() {
   const [weather, setWeather] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [backendReady, setBackendReady] = useState(null) // null=检查中, true=可用, false=不可用
   const debounceRef = useRef(null)
+
+  // ========== 启动时检查后端代理是否可用 ==========
+  useEffect(() => {
+    let cancelled = false
+    async function checkBackend() {
+      try {
+        const res = await fetch(API_STATUS_URL)
+        if (cancelled) return
+        if (res.ok) {
+          const data = await res.json()
+          setBackendReady(data.ok && data.distExists)
+        } else {
+          setBackendReady(false)
+        }
+      } catch {
+        if (!cancelled) setBackendReady(false)
+      }
+    }
+    checkBackend()
+    return () => { cancelled = true }
+  }, [])
 
   // ========== 搜索防抖 ==========
   useEffect(() => {
@@ -199,10 +224,18 @@ export default function useWeather() {
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
+      // 后端不可用时给出明确提示
+      if (backendReady === false) {
+        setError('天气服务暂时不可用，请稍后重试或联系管理员')
+        setResults([])
+        setShowResults(true)
+        return
+      }
       try {
         const list = await searchCity(keyword)
         setResults(list)
         setShowResults(true)
+        setError('')
       } catch {
         setResults([])
       }
@@ -210,7 +243,7 @@ export default function useWeather() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [search])
+  }, [search, backendReady])
 
   // ========== 选中城市，拉取天气 ==========
   const selectCity = useCallback(async (item) => {
@@ -269,6 +302,7 @@ export default function useWeather() {
     search, setSearch,
     results, showResults, setShowResults,
     city, weather, loading, error,
+    backendReady,
     selectCity,
   }
 }
