@@ -36,6 +36,7 @@ body {
 .reveal-delay-1 { transition-delay: 0.08s; }
 .reveal-delay-2 { transition-delay: 0.16s; }
 .reveal-delay-3 { transition-delay: 0.24s; }
+.reveal-delay-4 { transition-delay: 0.32s; }
 
 /* ===== Hero 姓名入场动画 ===== */
 @keyframes textRise {

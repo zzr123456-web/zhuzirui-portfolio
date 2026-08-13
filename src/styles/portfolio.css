@@ -79,6 +79,10 @@
   gap:28px;
 }
 
+@media (min-width:1440px){
+  .projects-grid{grid-template-columns:repeat(4,1fr);gap:24px;}
+}
+
 /* ===== 卡片 ===== */
 .card{
   background:var(--card-bg);
@@ -96,7 +100,7 @@
 .card:hover{transform:translate(-4px,-6px) rotate(-0.3deg);box-shadow:var(--shadow-acc);border-color:var(--vermilion);}
 .card:hover::before{transform:scaleX(1);}
 
-.card-1,.card-2,.card-3{grid-column:span 1;}
+.card-1,.card-2,.card-3,.card-4{grid-column:span 1;}
 
 .card-thumb{position:relative;height:280px;overflow:hidden;border-bottom:1.5px solid var(--ink);flex-shrink:0;}
 .card-body{padding:28px 32px 32px;flex:1;display:flex;flex-direction:column;}
@@ -173,6 +177,46 @@
 .tp-card .t2{height:4px;width:50%;background:var(--ink);opacity:0.3;border-radius:1px;}
 .tp-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-6deg);background:var(--vermilion);color:#fff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.2em;padding:8px 16px;border-radius:2px;box-shadow:var(--shadow-md);z-index:2;}
 
+/* ===== 卡片 4 缩略图：天气查询 ===== */
+.thumb-weather{
+  background:linear-gradient(160deg,#4FC3F7 0%,#29B6F6 40%,#1976D2 100%);
+  padding:20px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+}
+.thumb-weather::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 80% 20%,rgba(255,255,255,0.3),transparent 50%),
+             radial-gradient(circle at 20% 80%,rgba(255,255,255,0.15),transparent 50%);
+  pointer-events:none;
+}
+.tw-glass{
+  width:min(260px,75%);
+  background:rgba(255,255,255,0.2);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius:16px;
+  padding:20px 22px;
+  text-align:center;
+  color:#fff;
+  box-shadow:0 8px 32px rgba(0,0,0,0.15);
+  transform:perspective(800px) rotateY(-6deg) rotateX(3deg);
+  transition:transform .6s ease;
+  position:relative;z-index:1;
+}
+.card:hover .tw-glass{transform:perspective(800px) rotateY(0) rotateX(0) scale(1.05);}
+.tw-city{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.15em;opacity:0.85;margin-bottom:4px;}
+.tw-temp{font-family:'Playfair Display',serif;font-weight:900;font-size:52px;line-height:1;margin-bottom:2px;text-shadow:0 2px 8px rgba(0,0,0,0.15);}
+.tw-icon{font-size:32px;margin:4px 0;animation:weatherFloat 4s ease-in-out infinite;}
+@keyframes weatherFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.tw-desc{font-size:12px;opacity:0.9;margin-bottom:10px;}
+.tw-forecast{display:flex;align-items:center;justify-content:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.85;}
+.tw-bar{width:40px;height:3px;background:linear-gradient(90deg,#81D4FA,#FFD54F,#FF8A65);border-radius:2px;}
+.tw-label{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.3em;
+  color:rgba(255,255,255,0.7);text-transform:uppercase;
+}
+
 /* ===== ABOUT ===== */
 .about{padding:clamp(80px,12vw,160px) 0;position:relative;}
 .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(40px,6vw,96px);align-items:start;}
@@ -217,7 +261,7 @@
   .hero-right{order:-1;}
   .avatar-frame{width:clamp(180px,50vw,240px);height:clamp(180px,50vw,240px);}
   .projects-grid{grid-template-columns:repeat(2,1fr);gap:24px;}
-  .card-1,.card-2,.card-3{grid-column:span 1;}
+  .card-1,.card-2,.card-3,.card-4{grid-column:span 1;}
   .about-grid{grid-template-columns:1fr;gap:48px;}
   .hero-bottom{flex-direction:column;align-items:flex-start;gap:20px;}
   .topbar .nav{display:none;}

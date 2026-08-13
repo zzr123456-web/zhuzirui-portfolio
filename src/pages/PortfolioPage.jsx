@@ -71,7 +71,6 @@ export default function PortfolioPage() {
           <a href="#works">作品</a>
           <a href="#about">关于</a>
           <a href="#contact">联系</a>
-          <Link to="/weather">天气</Link>
         </nav>
         <div className="date">{today}</div>
       </header>
@@ -132,7 +131,7 @@ export default function PortfolioPage() {
                   STATUS<b>可接项目 ✦</b>
                 </div>
                 <div>
-                  PROJECTS<b>3 个精选</b>
+                  PROJECTS<b>4 个精选</b>
                 </div>
               </div>
             </div>
@@ -152,7 +151,7 @@ export default function PortfolioPage() {
                 精选<em>作品</em>。
               </h2>
               <div className="meta reveal reveal-delay-1">
-                <b>3 个项目</b>
+                <b>4 个项目</b>
                 <br />
                 2024 — 2026
               </div>
@@ -332,6 +331,44 @@ export default function PortfolioPage() {
                   <span className="card-cta">
                     正在查看 <span className="arrow">⊙</span>
                   </span>
+                </div>
+              </article>
+
+              {/* 卡片 4：天气查询 */}
+              <article className="card card-4 reveal reveal-delay-4">
+                <div className="card-thumb thumb-weather">
+                  <div className="tw-glass">
+                    <div className="tw-city">深圳</div>
+                    <div className="tw-temp">28°</div>
+                    <div className="tw-icon">⛅</div>
+                    <div className="tw-desc">多云转晴</div>
+                    <div className="tw-forecast">
+                      <span>26°</span>
+                      <div className="tw-bar" />
+                      <span>32°</span>
+                    </div>
+                  </div>
+                  <div className="tw-label">REAL-TIME · 和风天气</div>
+                </div>
+                <div className="card-body">
+                  <div className="card-meta">
+                    <div className="card-num">№ 04 / PROJECT</div>
+                    <div className="card-tags">
+                      <span className="tag">API</span>
+                      <span className="tag">React</span>
+                      <span className="tag acc">天气</span>
+                    </div>
+                  </div>
+                  <h3 className="card-title">
+                    <span className="small">Weather Query</span>天气查询
+                  </h3>
+                  <p className="card-desc">
+                    基于和风天气 API 的实时天气查询工具。支持全球城市搜索、7 日预报、
+                    详细气象指标（湿度/风速/紫外线）。玻璃拟态 UI 与天气主题渐变联动。
+                  </p>
+                  <Link to="/weather" className="card-cta">
+                    打开项目 <span className="arrow">→</span>
+                  </Link>
                 </div>
               </article>
             </div>
