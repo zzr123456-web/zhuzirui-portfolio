@@ -1,0 +1,132 @@
+/* ===== 天气页面独立样式 ===== */
+/* 类名加 weather- 前缀避免与 Tailwind/其他页面冲突 */
+
+/* 页面整体：背景渐变切换过渡 */
+.weather-page {
+  transition: background 0.8s ease;
+  /* 防止顶部背景被全局 body::before 噪点纹理遮盖影响氛围 */
+  position: relative;
+}
+
+/* 玻璃拟态卡片基础 */
+.weather-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 主天气卡片：放大呼吸感 */
+.current-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+/* 详情卡片 hover 抬升 */
+.detail-card:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ===== 搜索框 ===== */
+.weather-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.weather-input:focus {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+/* 候选下拉项：左侧朱红装饰条 */
+.weather-dropdown-item {
+  position: relative;
+}
+.weather-dropdown-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+.weather-dropdown-item:hover::before {
+  background: #C8381D;
+}
+
+/* ===== 加载动画：旋转环 ===== */
+.weather-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: weatherSpin 0.9s linear infinite;
+}
+
+@keyframes weatherSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== 主天气图标：缓慢漂浮 ===== */
+.weather-icon {
+  display: inline-block;
+  animation: weatherFloat 4s ease-in-out infinite;
+  /* 提示浏览器优化动画属性 */
+  will-change: transform;
+}
+
+@keyframes weatherFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+/* ===== 当前温度：数字入场 ===== */
+.weather-temp {
+  animation: weatherRise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes weatherRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== 7天预报温度条 ===== */
+.forecast-bar {
+  /* 宽度变化使用 transform 性能更佳，但此处需基于百分比定位，保留 width 过渡 */
+  transition: width 0.4s ease, left 0.4s ease;
+}
+
+.forecast-row {
+  transition: background 0.2s ease;
+}
+.forecast-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+/* ===== 响应式微调 ===== */
+@media (max-width: 600px) {
+  .weather-container {
+    padding: 1rem 1rem 2rem;
+  }
+  .current-card {
+    padding: 1.75rem !important;
+  }
+  /* 移动端隐藏天气描述列，避免温度条挤压 */
+  .forecast-desc {
+    display: none !important;
+  }
+}
+
+/* ===== 滚动条美化（候选下拉） ===== */
+.weather-dropdown::-webkit-scrollbar {
+  width: 4px;
+}
+.weather-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(200, 56, 29, 0.4);
+  border-radius: 2px;
+}
