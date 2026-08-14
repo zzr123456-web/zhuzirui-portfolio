@@ -13,7 +13,7 @@ import '../styles/weather.css'
 export default function WeatherPage() {
   const {
     search, setSearch, results, showResults, setShowResults,
-    city, weather, loading, error, backendReady, demoMode, selectCity,
+    city, weather, loading, error, selectCity,
   } = useWeather()
 
   // 和风实时天气的 icon code，用于动态背景（找不到就 fallback 到 cloud）
@@ -36,14 +36,6 @@ export default function WeatherPage() {
           </h1>
           <span className="text-white/70 text-xs font-mono w-16 text-right">和风天气</span>
         </header>
-
-        {/* 顶部状态条：后端不可用时显示 Demo 模式提示，不阻塞用户操作 */}
-        {demoMode && (
-          <div className="weather-demo-banner mb-4">
-            <span className="weather-demo-badge">DEMO · 演示模式</span>
-            <span className="text-xs opacity-90">后端代理未运行，展示内置示例数据</span>
-          </div>
-        )}
 
         {/* 搜索框 */}
         <SearchBar
