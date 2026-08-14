@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { pinyin } from 'pinyin-pro'
 import { QW_ERROR_MESSAGES } from '../utils/qweatherUtils.js'
+import { mockSearchCity, mockFetchWeather } from '../utils/weatherMockData.js'
 
 /**
  * 和风天气（QWeather）前端请求前缀
@@ -8,6 +9,7 @@ import { QW_ERROR_MESSAGES } from '../utils/qweatherUtils.js'
  *   /api/qw/v2/city/lookup* → geoapi.qweather.com   （Geo Lookup）
  *   /api/qw/v7/*            → ke78krj838.re.qweatherapi.com（天气/指数）
  * 代理会在转发时注入 X-QW-Api-Key Header 并处理 gzip/br 解压
+ * 如果后端不可用（如纯静态部署），会自动 fallback 到内置 mock 数据（Demo 模式）
  */
 const API_PREFIX = '/api/qw'
 
@@ -127,6 +129,10 @@ async function fetchQw(url) {
  *   1) 命中 FOREIGN_CITY_MAP → 用英文标准名查
  *   2) 用原始关键词查
  *   3) 仍无结果且含中文 → 转拼音再查一次
+ *   4) 真实 API 全部失败或无结果 → fallback 到内置 mock 数据（Demo 模式）
+ *
+ * 返回值：{ results: location[], fromMock: boolean }
+ * 包装为对象后，调用方可以知道是否走了 mock，并在 UI 显示 DEMO 徽章
  */
 async function searchCity(keyword) {
   const queries = []
@@ -137,21 +143,24 @@ async function searchCity(keyword) {
     const py = toPinyin(keyword)
     if (py && py !== keyword) queries.push(py)
   }
-  // 逐次尝试，取第一个返回成功且有结果的
+  // 逐次尝试真实 API，任何一次成功有结果立即返回
   for (const kw of queries) {
     const url = `${API_PREFIX}/v2/city/lookup?location=${encodeURIComponent(kw)}&number=5`
     const res = await fetchQw(url)
     if (res.ok && res.data.location && res.data.location.length > 0) {
-      return res.data.location
+      return { results: res.data.location, fromMock: false }
     }
   }
-  return []
+  // 真实路径全失败 → 走 Demo 模式
+  return { results: mockSearchCity(keyword), fromMock: true }
 }
 
 /**
  * 并行请求「实时天气 + 7日预报 + 紫外线指数」三个接口
  * 使用 Promise.allSettled：单个接口失败不阻塞整体，给前端展示部分数据
+ * 如果真实接口全部失败（后端不可用），自动 fallback 到 mock
  * @param {string} locationId 和风 Location ID，如 "101010100"
+ * @returns { now, daily, indices, fromMock } fromMock 标记是否走了 Demo 模式
  */
 async function fetchAllWeather(locationId) {
   const nowUrl      = `${API_PREFIX}/v7/weather/now?location=${locationId}`
@@ -166,11 +175,22 @@ async function fetchAllWeather(locationId) {
 
   // allSettled：无论请求是否成功都会返回 status + value/reason
   const pick = (r) => r.status === 'fulfilled' ? r.value : { ok: false, code: '500', message: '请求异常' }
+  const now = pick(nowRes)
+  const daily = pick(dailyRes)
+  const indices = pick(indicesRes)
 
+  // 真实数据成功（至少 now 或 daily 有一个 ok）→ 正常返回
+  if (now.ok || daily.ok) {
+    return { now, daily, indices, fromMock: false }
+  }
+
+  // 真实全挂 → 走 mock
+  const mock = mockFetchWeather(locationId)
   return {
-    now: pick(nowRes),
-    daily: pick(dailyRes),
-    indices: pick(indicesRes),
+    now: { ok: true, data: { now: mock.now, updateTime: mock.updateTime } },
+    daily: { ok: true, data: { daily: mock.daily, updateTime: mock.updateTime } },
+    indices: { ok: true, data: { daily: [mock.indices], updateTime: mock.updateTime } },
+    fromMock: true,
   }
 }
 
@@ -191,6 +211,8 @@ export default function useWeather() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [backendReady, setBackendReady] = useState(null) // null=检查中, true=可用, false=不可用
+  // Demo 模式标记：true 表示当前展示的是 mock 数据（用于 UI 显示徽章）
+  const [demoMode, setDemoMode] = useState(false)
   const debounceRef = useRef(null)
 
   // ========== 启动时检查后端代理是否可用 ==========
@@ -224,18 +246,13 @@ export default function useWeather() {
     }
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
-      // 后端不可用时给出明确提示
-      if (backendReady === false) {
-        setError('天气服务暂时不可用，请稍后重试或联系管理员')
-        setResults([])
-        setShowResults(true)
-        return
-      }
       try {
-        const list = await searchCity(keyword)
+        const { results: list, fromMock } = await searchCity(keyword)
         setResults(list)
         setShowResults(true)
         setError('')
+        // 搜索阶段走 mock → 提前打开 Demo 徽章（选城市拉取时也会再设一次，保证同步）
+        if (fromMock) setDemoMode(true)
       } catch {
         setResults([])
       }
@@ -243,7 +260,7 @@ export default function useWeather() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [search, backendReady])
+  }, [search])
 
   // ========== 选中城市，拉取天气 ==========
   const selectCity = useCallback(async (item) => {
@@ -266,6 +283,9 @@ export default function useWeather() {
     try {
       const all = await fetchAllWeather(locationId)
 
+      // 记录是否走了 mock（UI 用）
+      setDemoMode(!!all.fromMock)
+
       // 至少有一个接口成功就算展示成功（展示部分数据也好过空）
       const anyOk = all.now.ok || all.daily.ok
       if (!anyOk) {
@@ -275,7 +295,7 @@ export default function useWeather() {
         setWeather(null)
         return
       }
-      // 单条失败写入非阻断 warning，UI 层可忽略
+      // 单条失败写入非阻断 warning，UI 层可忽略（但 Demo 模式下不会有这些）
       const warnings = []
       if (!all.now.ok) warnings.push(`实时天气：${all.now.message}`)
       if (!all.daily.ok) warnings.push(`7 日预报：${all.daily.message}`)
@@ -302,7 +322,7 @@ export default function useWeather() {
     search, setSearch,
     results, showResults, setShowResults,
     city, weather, loading, error,
-    backendReady,
+    backendReady, demoMode,
     selectCity,
   }
 }
