@@ -4,17 +4,23 @@ import { QW_ERROR_MESSAGES } from '../utils/qweatherUtils.js'
 import { mockSearchCity, mockFetchWeather } from '../utils/weatherMockData.js'
 
 /**
- * 和风天气（QWeather）前端请求前缀
- * 所有请求由本地代理 server.js 转发：
- *   /api/qw/v2/city/lookup* → geoapi.qweather.com   （Geo Lookup）
- *   /api/qw/v7/*            → ke78krj838.re.qweatherapi.com（天气/指数）
- * 代理会在转发时注入 X-QW-Api-Key Header 并处理 gzip/br 解压
- * 如果后端不可用（如纯静态部署），会自动 fallback 到内置 mock 数据（Demo 模式）
+ * 和风天气（QWeather）前端直连配置
+ *
+ * 【为什么不使用 server.js 代理了】
+ *   和风天气 Web API v7 起原生支持浏览器端 CORS 调用（响应头带 Access-Control-Allow-Origin:*）
+ *   因此纯静态部署（Zeabur / GitHub Pages 等）可以直接从前端 fetch 官方域名，无需后端。
+ *   同时保留 mock fallback：API 失败（Key 无效、请求频率超限、断网）时，
+ *   自动降级为 Demo 模式展示内置数据，避免页面空窗。
+ *
+ * 【路由规则】
+ *   GeoAPI（查城市 ID） → https://geoapi.qweather.com/v2/city/lookup
+ *   WeatherAPI（实时/预报/指数） → https://{QW_WEATHER_HOST}/v7/{weather|indices}
+ *   两个接口都需要在 URL 上带 ?key={QW_API_KEY}（v7 支持 URL 参数传 Key，不再用 Header）
  */
-const API_PREFIX = '/api/qw'
-
-// 后端 API 状态检查端点
-const API_STATUS_URL = '/api-status'
+const QW_API_KEY = 'b3283a3af2c4454e94077d7805b2d1d5'
+const QW_WEATHER_HOST = 'ke78krj838.re.qweatherapi.com' // 商业版个人专属子域
+const GEO_API_BASE = 'https://geoapi.qweather.com'
+const WEATHER_API_BASE = `https://${QW_WEATHER_HOST}`
 
 /**
  * 常见外国城市 中文 → 英文 映射表
@@ -145,7 +151,7 @@ async function searchCity(keyword) {
   }
   // 逐次尝试真实 API，任何一次成功有结果立即返回
   for (const kw of queries) {
-    const url = `${API_PREFIX}/v2/city/lookup?location=${encodeURIComponent(kw)}&number=5`
+    const url = `${GEO_API_BASE}/v2/city/lookup?location=${encodeURIComponent(kw)}&number=5&key=${QW_API_KEY}`
     const res = await fetchQw(url)
     if (res.ok && res.data.location && res.data.location.length > 0) {
       return { results: res.data.location, fromMock: false }
@@ -158,14 +164,14 @@ async function searchCity(keyword) {
 /**
  * 并行请求「实时天气 + 7日预报 + 紫外线指数」三个接口
  * 使用 Promise.allSettled：单个接口失败不阻塞整体，给前端展示部分数据
- * 如果真实接口全部失败（后端不可用），自动 fallback 到 mock
+ * 如果真实接口全部失败（网络错误、Key 无效等），自动 fallback 到 mock
  * @param {string} locationId 和风 Location ID，如 "101010100"
  * @returns { now, daily, indices, fromMock } fromMock 标记是否走了 Demo 模式
  */
 async function fetchAllWeather(locationId) {
-  const nowUrl      = `${API_PREFIX}/v7/weather/now?location=${locationId}`
-  const dailyUrl    = `${API_PREFIX}/v7/weather/7d?location=${locationId}`
-  const indicesUrl  = `${API_PREFIX}/v7/indices/1d?location=${locationId}&type=5` // type=5 紫外线
+  const nowUrl      = `${WEATHER_API_BASE}/v7/weather/now?location=${locationId}&key=${QW_API_KEY}`
+  const dailyUrl    = `${WEATHER_API_BASE}/v7/weather/7d?location=${locationId}&key=${QW_API_KEY}`
+  const indicesUrl  = `${WEATHER_API_BASE}/v7/indices/1d?location=${locationId}&type=5&key=${QW_API_KEY}` // type=5 紫外线
 
   const [nowRes, dailyRes, indicesRes] = await Promise.allSettled([
     fetchQw(nowUrl),
@@ -210,34 +216,12 @@ export default function useWeather() {
   const [weather, setWeather] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [backendReady, setBackendReady] = useState(null) // null=检查中, true=可用, false=不可用
-  // Demo 模式标记：true 表示当前展示的是 mock 数据（用于 UI 显示徽章）
+  // Demo 模式标记：真实 API 失败 fallback 时为 true，UI 显示 DEMO 徽章（真实数据时不显示）
   const [demoMode, setDemoMode] = useState(false)
   const debounceRef = useRef(null)
 
-  // ========== 启动时检查后端代理是否可用 ==========
-  useEffect(() => {
-    let cancelled = false
-    async function checkBackend() {
-      try {
-        const res = await fetch(API_STATUS_URL)
-        if (cancelled) return
-        if (res.ok) {
-          const data = await res.json()
-          setBackendReady(data.ok && data.distExists)
-        } else {
-          setBackendReady(false)
-        }
-      } catch {
-        if (!cancelled) setBackendReady(false)
-      }
-    }
-    checkBackend()
-    return () => { cancelled = true }
-  }, [])
-
   // ========== 搜索防抖 ==========
-  // 依赖 backendReady：后端状态变化时重新搜索（null→false 时切到 mock）
+  // 直接调用真实和风 API（前端直连，无代理），失败时自动 fallback 到 mock
   useEffect(() => {
     const keyword = search.trim()
     if (!keyword) {
@@ -248,21 +232,12 @@ export default function useWeather() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       try {
-        // 后端已确认不可用 → 直接走 mock，不发真实 API 请求（避免 404 等待）
-        if (backendReady === false) {
-          const list = mockSearchCity(keyword)
-          setResults(list)
-          setShowResults(true)
-          setError('')
-          setDemoMode(true)
-          return
-        }
-        // 后端可用或检查中 → 正常流程（含 fallback 兜底）
         const { results: list, fromMock } = await searchCity(keyword)
         setResults(list)
         setShowResults(true)
         setError('')
-        if (fromMock) setDemoMode(true)
+        // 仅真实 API 失败且走了 mock 时才打开 Demo 徽章
+        setDemoMode(!!fromMock)
       } catch {
         setResults([])
       }
@@ -270,7 +245,7 @@ export default function useWeather() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [search, backendReady])
+  }, [search])
 
   // ========== 选中城市，拉取天气 ==========
   const selectCity = useCallback(async (item) => {
@@ -291,22 +266,8 @@ export default function useWeather() {
     setLoading(true)
     setError('')
     try {
-      // 后端已确认不可用 → 直接走 mock，不发真实 API 请求
-      if (backendReady === false) {
-        const mock = mockFetchWeather(locationId)
-        setDemoMode(true)
-        setWeather({
-          now: mock.now,
-          daily: mock.daily,
-          indices: mock.indices,
-          updateTime: mock.updateTime,
-        })
-        return
-      }
-      // 后端可用或检查中 → 正常流程（含 fallback 兜底）
+      // 优先真实 API；失败（网络/Key/频控）时 fetchAllWeather 内部会返回 fromMock=true 的 mock 数据
       const all = await fetchAllWeather(locationId)
-
-      // 记录是否走了 mock（UI 用）
       setDemoMode(!!all.fromMock)
 
       // 至少有一个接口成功就算展示成功（展示部分数据也好过空）
@@ -318,7 +279,7 @@ export default function useWeather() {
         setWeather(null)
         return
       }
-      // 单条失败写入非阻断 warning，UI 层可忽略（但 Demo 模式下不会有这些）
+      // 单条失败写入非阻断 warning，UI 层可忽略（Demo 模式下不会有这些）
       const warnings = []
       if (!all.now.ok) warnings.push(`实时天气：${all.now.message}`)
       if (!all.daily.ok) warnings.push(`7 日预报：${all.daily.message}`)
@@ -339,13 +300,13 @@ export default function useWeather() {
     } finally {
       setLoading(false)
     }
-  }, [backendReady])
+  }, [])
 
   return {
     search, setSearch,
     results, showResults, setShowResults,
     city, weather, loading, error,
-    backendReady, demoMode,
+    backendReady: true, demoMode, // 直连模式下「后端已就绪」= true，不阻塞任何功能
     selectCity,
   }
 }
