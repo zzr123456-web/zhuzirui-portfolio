@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import '../styles/snake.css'
 
 export default function SnakePage() {
   const rafRef = useRef(null)
+  const navigate = useNavigate()
+  const modeRef = useRef('menu')           // 当前游戏模式（供外部按钮判断）
+  const returnToMenuRef = useRef(null)     // returnToMenu 函数引用
 
   useEffect(() => {
     /* ========================================================
@@ -365,6 +368,12 @@ export default function SnakePage() {
       currentSkin: 'neon',     // 当前选中皮肤
     };
 
+    // ---------- 模式切换辅助（同时同步到外部 ref，供返回按钮判断）----------
+    function setMode(m) {
+      state.mode = m;
+      modeRef.current = m;
+    }
+
     // ---------- 初始化菜单 ----------
     function buildTerrainGrid() {
       terrainGrid.innerHTML = '';
@@ -582,7 +591,7 @@ export default function SnakePage() {
       pauseOverlay.classList.remove('show');
       overOverlay.classList.remove('show');
 
-      state.mode = 'playing';
+      setMode('playing');
       // 等待布局完成后调整canvas
       requestAnimationFrame(() => {
         resizeCanvas();
@@ -924,7 +933,7 @@ export default function SnakePage() {
     // ---------- 暂停 ----------
     function pauseGame() {
       if (state.mode !== 'playing') return;
-      state.mode = 'paused';
+      setMode('paused');
       pauseOverlay.classList.add('show');
       // 切换暂停按钮图标为播放
       pauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
@@ -932,7 +941,7 @@ export default function SnakePage() {
     function resumeGame() {
       if (state.mode !== 'paused') return;
       pauseOverlay.classList.remove('show');
-      state.mode = 'playing';
+      setMode('playing');
       state.lastStep = performance.now();
       pauseBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
     }
@@ -943,7 +952,7 @@ export default function SnakePage() {
 
     // ---------- 游戏结束 ----------
     function gameOver(isWin) {
-      state.mode = 'over';
+      setMode('over');
       state.deathFlash = 1;
       if (!isWin) spawnDeathParticles();
 
@@ -976,7 +985,7 @@ export default function SnakePage() {
       if (state.rafId) cancelAnimationFrame(state.rafId);
       state.rafId = null;
       rafRef.current = null;
-      state.mode = 'menu';
+      setMode('menu');
       pauseOverlay.classList.remove('show');
       overOverlay.classList.remove('show');
       gameScreen.classList.remove('active');
@@ -986,6 +995,8 @@ export default function SnakePage() {
       buildSkinGrid();
       totalScoreEl.textContent = state.totalScore;
     }
+    // 将 returnToMenu 暴露给外部按钮使用
+    returnToMenuRef.current = returnToMenu;
 
     // ---------- 方向控制（零延迟 + 绝对防反转）----------
     // 核心规则：无论本步改了多少次方向，最终方向**绝对不能与上一步实际移动方向（appliedDir）成 180°**
@@ -1130,7 +1141,7 @@ export default function SnakePage() {
       clearTimeout(toastTimer);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (state.rafId) cancelAnimationFrame(state.rafId);
-      state.mode = 'menu';
+      setMode('menu');
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onOrientationChange);
       document.removeEventListener('keydown', onKeyDown);
@@ -1149,13 +1160,19 @@ export default function SnakePage() {
         rel="stylesheet"
       />
 
-      {/* 返回按钮 */}
-      <Link
-        to="/"
+      {/* 返回按钮：菜单态→回作品集首页；游戏中/暂停/死亡→回蛇蛇菜单 */}
+      <button
+        onClick={() => {
+          if (modeRef.current === 'menu') {
+            navigate('/');
+          } else {
+            returnToMenuRef.current?.();
+          }
+        }}
         className="fixed top-4 right-4 z-[200] px-4 py-2 rounded-lg border border-cyan-400/50 bg-[rgba(10,18,38,0.8)] text-cyan-300 font-mono text-sm tracking-widest backdrop-blur-md hover:bg-cyan-500/20 hover:shadow-[0_0_16px_rgba(0,240,255,0.4)] transition-all"
       >
         ← 返回
-      </Link>
+      </button>
 
       {/* 原始 HTML body 内容 */}
       <div className="scanlines"></div>
