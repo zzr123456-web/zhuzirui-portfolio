@@ -120,6 +120,171 @@ export default function SnakePage() {
           return obs;
         }
       },
+      cross: {
+        name: 'CROSS',
+        desc: '十字 · 突围',
+        icon: [0,0,1,0,0, 0,0,1,0,0, 1,1,1,1,1, 0,0,1,0,0, 0,0,1,0,0],
+        build: (g) => {
+          const obs = [];
+          const mid = Math.floor(g/2);
+          const r = 6;   // 十字臂长度
+          const h = 2;   // 中央通道宽度（±h）
+          // 上臂：y = mid-r，x 跳过中央通道
+          for (let x = mid-r; x <= mid+r; x++) {
+            if (x < mid-h-1 || x > mid+h+1) {
+              obs.push({x, y: mid-r});
+              obs.push({x, y: mid+r});
+            }
+          }
+          // 左右臂：x = mid-r，y 跳过中央通道
+          for (let y = mid-r; y <= mid+r; y++) {
+            if (y < mid-h-1 || y > mid+h+1) {
+              obs.push({x: mid-r, y});
+              obs.push({x: mid+r, y});
+            }
+          }
+          return obs;
+        }
+      },
+      diagonal: {
+        name: 'DIAGONAL',
+        desc: '斜线 · 穿越',
+        icon: [0,0,0,0,1, 0,0,0,1,0, 0,0,1,0,0, 0,1,0,0,0, 1,0,0,0,0],
+        build: (g) => {
+          const obs = [];
+          const mid = Math.floor(g/2);
+          // 两条对角线（左下→右上 + 左上→右下），避开中央安全区
+          for (let i = 0; i < g; i++) {
+            // 主对角线：y = i
+            if (Math.abs(i - mid) > 3) {
+              obs.push({x: i, y: i});
+              if (i+1 < g && Math.abs(i+1 - mid) > 3) obs.push({x: i, y: i+1});
+            }
+            // 副对角线：y = g-1-i
+            if (Math.abs((g-1-i) - mid) > 3) {
+              obs.push({x: i, y: g-1-i});
+              if (g-1-i-1 >= 0 && Math.abs((g-1-i-1) - mid) > 3) obs.push({x: i, y: g-1-i-1});
+            }
+          }
+          return obs;
+        }
+      },
+      hex: {
+        name: 'HEX',
+        desc: '六边 · 堡垒',
+        icon: [0,1,1,1,0, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 0,1,1,1,0],
+        build: (g) => {
+          const obs = [];
+          const mid = Math.floor(g/2);
+          const r1 = 6; // 外圈半径
+          const r2 = 3; // 内圈半径（留空）
+          // 六边形：|dx| + 0.6*dy ≈ r1 的边界线
+          for (let x = 0; x < g; x++) {
+            for (let y = 0; y < g; y++) {
+              const dx = Math.abs(x - mid);
+              const dy = Math.abs(y - mid);
+              const d = dx + 0.6 * dy;
+              // 外圈边界
+              if (d >= r1 - 0.5 && d <= r1 + 0.5) {
+                obs.push({x, y});
+              }
+            }
+          }
+          // 6 个入口：每条边的中点附近留空，保证连通
+          const entrances = [
+            {x: mid, y: mid - r1}, // 上
+            {x: mid, y: mid + r1}, // 下
+            {x: mid - Math.round(r1*0.6), y: mid - Math.round(r1*0.5)}, // 左上
+            {x: mid + Math.round(r1*0.6), y: mid - Math.round(r1*0.5)}, // 右上
+            {x: mid - Math.round(r1*0.6), y: mid + Math.round(r1*0.5)}, // 左下
+            {x: mid + Math.round(r1*0.6), y: mid + Math.round(r1*0.5)}, // 右下
+          ];
+          const entSet = new Set(entrances.map(e => e.x + ',' + e.y));
+          // 过滤入口格
+          return obs.filter(o => !entSet.has(o.x + ',' + o.y));
+        }
+      },
+      spiral: {
+        name: 'SPIRAL',
+        desc: '螺旋 · 迷阵',
+        icon: [0,0,0,0,0, 0,1,1,1,0, 0,1,0,1,0, 0,1,1,1,0, 0,0,0,0,0],
+        build: (g) => {
+          const obs = [];
+          const mid = Math.floor(g/2);
+          // 4 条螺旋臂，从半径 5 开始向外螺旋
+          const arms = [
+            {sx: mid, sy: mid - 5, dx: 1, dy: 0, len: 4}, // 上臂向右
+            {sx: mid + 4, sy: mid - 5, dx: 0, dy: 1, len: 4}, // 上臂末端向下
+            {sx: mid + 5, sy: mid, dx: 0, dy: 1, len: 4}, // 右臂向下
+            {sx: mid + 5, sy: mid + 4, dx: -1, dy: 0, len: 4}, // 右臂末端向左
+            {sx: mid, sy: mid + 5, dx: -1, dy: 0, len: 4}, // 下臂向左
+            {sx: mid - 4, sy: mid + 5, dx: 0, dy: -1, len: 4}, // 下臂末端向上
+            {sx: mid - 5, sy: mid, dx: 0, dy: -1, len: 4}, // 左臂向上
+            {sx: mid - 5, sy: mid - 4, dx: 1, dy: 0, len: 4}, // 左臂末端向右
+          ];
+          arms.forEach(a => {
+            for (let i = 0; i < a.len; i++) {
+              const x = a.sx + a.dx * i;
+              const y = a.sy + a.dy * i;
+              if (x >= 0 && x < g && y >= 0 && y < g) {
+                obs.push({x, y});
+              }
+            }
+          });
+          return obs;
+        }
+      },
+      fort: {
+        name: 'FORT',
+        desc: '方城 · 要塞',
+        icon: [1,1,1,1,1, 1,0,0,0,1, 1,0,0,0,1, 1,0,0,0,1, 1,1,1,1,1],
+        build: (g) => {
+          const obs = [];
+          const mid = Math.floor(g/2);
+          // 外墙：距边界 2 格的方形围墙，每边留 5 格缺口
+          const t = 2; // 墙厚度方向的偏移
+          const gap = 5; // 缺口宽度
+          const gapStart = Math.floor((g - gap) / 2);
+          const gapEnd = gapStart + gap;
+          // 上墙 (y=2)，x 跳过缺口
+          for (let x = 2; x < g-2; x++) {
+            if (x < gapStart || x >= gapEnd) {
+              obs.push({x, y: t});
+            }
+          }
+          // 下墙 (y=g-3)
+          for (let x = 2; x < g-2; x++) {
+            if (x < gapStart || x >= gapEnd) {
+              obs.push({x, y: g-1-t});
+            }
+          }
+          // 左墙 (x=2)
+          for (let y = 2; y < g-2; y++) {
+            if (y < gapStart || y >= gapEnd) {
+              obs.push({x: t, y});
+            }
+          }
+          // 右墙 (x=g-3)
+          for (let y = 2; y < g-2; y++) {
+            if (y < gapStart || y >= gapEnd) {
+              obs.push({x: g-1-t, y});
+            }
+          }
+          // 四角城楼（3x3 实心块）
+          const corners = [
+            {x: 2, y: 2}, {x: g-5, y: 2},
+            {x: 2, y: g-5}, {x: g-5, y: g-5},
+          ];
+          corners.forEach(c => {
+            for (let dx = 0; dx < 3; dx++) {
+              for (let dy = 0; dy < 3; dy++) {
+                obs.push({x: c.x + dx, y: c.y + dy});
+              }
+            }
+          });
+          return obs;
+        }
+      },
     };
 
     // ---------- 皮肤定义 ----------
@@ -427,24 +592,63 @@ export default function SnakePage() {
       });
     }
 
-    // ---------- 生成食物 ----------
+    // ---------- 生成食物（BFS 连通性检查，杜绝死角）----------
+    // 核心思路：食物不仅要"空闲"，还必须从蛇头可达。
+    // 用 BFS 从蛇头出发遍历所有能到达的格子，再从这些格子中随机选食物。
+    // 这样无论哪种地形、蛇多长，食物永远不会出现在蛇走不到的死角。
     function spawnFood() {
       const blocked = new Set();
       state.snake.forEach(s => blocked.add(s.x + ',' + s.y));
       state.obstacles.forEach(o => blocked.add(o.x + ',' + o.y));
-      const free = [];
-      for (let x = 0; x < GRID; x++) {
-        for (let y = 0; y < GRID; y++) {
-          if (!blocked.has(x + ',' + y)) free.push({x, y});
+
+      // BFS：从蛇头出发，沿合法移动方向（含穿墙环绕）标记所有可达格
+      const head = state.snake[0];
+      const reachable = new Set();
+      const queue = [{ x: head.x, y: head.y }];
+      reachable.add(head.x + ',' + head.y);
+
+      while (queue.length) {
+        const cur = queue.shift();
+        const neighbors = [
+          { x: cur.x + 1, y: cur.y },
+          { x: cur.x - 1, y: cur.y },
+          { x: cur.x, y: cur.y + 1 },
+          { x: cur.x, y: cur.y - 1 },
+        ];
+        for (const n of neighbors) {
+          let nx = n.x, ny = n.y;
+          if (state.wrap) {
+            // 穿墙模式：坐标环绕到对侧
+            nx = ((nx % GRID) + GRID) % GRID;
+            ny = ((ny % GRID) + GRID) % GRID;
+          } else {
+            // 普通模式：越界即不可达
+            if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+          }
+          const key = nx + ',' + ny;
+          if (reachable.has(key)) continue; // 已访问
+          if (blocked.has(key)) continue;   // 障碍/蛇身
+          reachable.add(key);
+          queue.push({ x: nx, y: ny });
         }
       }
-      if (free.length === 0) {
-        // 通关了——视为胜利结束
+
+      // 候选集 = 空闲 ∩ 可达
+      const candidates = [];
+      for (let x = 0; x < GRID; x++) {
+        for (let y = 0; y < GRID; y++) {
+          const key = x + ',' + y;
+          if (!blocked.has(key) && reachable.has(key)) candidates.push({ x, y });
+        }
+      }
+
+      if (candidates.length === 0) {
+        // 所有可达格都占满了 — 通关胜利
         state.food = null;
         gameOver(true);
         return;
       }
-      state.food = free[Math.floor(Math.random() * free.length)];
+      state.food = candidates[Math.floor(Math.random() * candidates.length)];
     }
 
     // ---------- 主循环 ----------
@@ -783,15 +987,17 @@ export default function SnakePage() {
       totalScoreEl.textContent = state.totalScore;
     }
 
-    // ---------- 方向控制（零延迟即时应用）----------
+    // ---------- 方向控制（零延迟 + 绝对防反转）----------
+    // 核心规则：无论本步改了多少次方向，最终方向**绝对不能与上一步实际移动方向（appliedDir）成 180°**
+    // 这样就杜绝了"连按方向绕过反向检查导致蛇头指向第二节身体自碰"的 BUG
     function setDirection(dx, dy) {
       if (state.mode !== 'playing') return;
-      // 不能 180° 反转 — 相对**本步**实际移动方向 state.dir（而非上一步 appliedDir）
-      // 这样快速连按（如向右→向上→向左 合法L型转弯）不会被误丢
-      if (dx === -state.dir.x && dy === -state.dir.y) return;
       // 同方向忽略
       if (dx === state.dir.x && dy === state.dir.y) return;
-      // 即时更新方向，下一步 step 立即生效（零按键延迟）
+      // 180° 反转禁止 — 只参考"上一步实际移动方向 appliedDir"（唯一绝对基准）
+      // 这样即使连按（右→上→左），只要 appliedDir 还是向右，向左就会被拦截——因为蛇的第二节此时仍在头的左边
+      if (dx === -state.appliedDir.x && dy === -state.appliedDir.y) return;
+      // 即时生效：蛇头眼睛立即转向（视觉反馈），下一步 step 立即朝此方向移动
       state.dir.x = dx;
       state.dir.y = dy;
     }
@@ -960,7 +1166,7 @@ export default function SnakePage() {
         <section id="menu" className="screen active">
           <div className="panel menu-card">
             <h1 className="brand">NEON SERPENT</h1>
-            <div className="tagline">霓 虹 蛇 // SYS_v2.0<span className="blink">_</span></div>
+            <div className="tagline">霓 虹 蛇 // SYS_v2.1<span className="blink">_</span></div>
 
             <div className="section-label">难度 // DIFFICULTY</div>
             <div className="opt-grid" id="diffGrid">
