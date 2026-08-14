@@ -237,6 +237,7 @@ export default function useWeather() {
   }, [])
 
   // ========== 搜索防抖 ==========
+  // 依赖 backendReady：后端状态变化时重新搜索（null→false 时切到 mock）
   useEffect(() => {
     const keyword = search.trim()
     if (!keyword) {
@@ -247,11 +248,20 @@ export default function useWeather() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       try {
+        // 后端已确认不可用 → 直接走 mock，不发真实 API 请求（避免 404 等待）
+        if (backendReady === false) {
+          const list = mockSearchCity(keyword)
+          setResults(list)
+          setShowResults(true)
+          setError('')
+          setDemoMode(true)
+          return
+        }
+        // 后端可用或检查中 → 正常流程（含 fallback 兜底）
         const { results: list, fromMock } = await searchCity(keyword)
         setResults(list)
         setShowResults(true)
         setError('')
-        // 搜索阶段走 mock → 提前打开 Demo 徽章（选城市拉取时也会再设一次，保证同步）
         if (fromMock) setDemoMode(true)
       } catch {
         setResults([])
@@ -260,7 +270,7 @@ export default function useWeather() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [search])
+  }, [search, backendReady])
 
   // ========== 选中城市，拉取天气 ==========
   const selectCity = useCallback(async (item) => {
@@ -281,6 +291,19 @@ export default function useWeather() {
     setLoading(true)
     setError('')
     try {
+      // 后端已确认不可用 → 直接走 mock，不发真实 API 请求
+      if (backendReady === false) {
+        const mock = mockFetchWeather(locationId)
+        setDemoMode(true)
+        setWeather({
+          now: mock.now,
+          daily: mock.daily,
+          indices: mock.indices,
+          updateTime: mock.updateTime,
+        })
+        return
+      }
+      // 后端可用或检查中 → 正常流程（含 fallback 兜底）
       const all = await fetchAllWeather(locationId)
 
       // 记录是否走了 mock（UI 用）
@@ -316,7 +339,7 @@ export default function useWeather() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [backendReady])
 
   return {
     search, setSearch,
