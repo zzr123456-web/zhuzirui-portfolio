@@ -39,12 +39,16 @@ export default {
         },
       },
       fontFamily: {
-        serif:  ['"Playfair Display"', '"Noto Serif SC"', 'Georgia', 'serif'],
-        sans:   ['"Inter Tight"', '"PingFang SC"', '"Microsoft YaHei"', 'system-ui', 'sans-serif'],
-        mono:   ['"JetBrains Mono"', '"Courier New"', 'monospace'],
-        display:['"Orbitron"', 'sans-serif'],
-        tech:   ['"Share Tech Mono"', 'monospace'],
-        rajdhani:['"Rajdhani"', 'sans-serif'],
+        // 衬线：Playfair Display（英文）+ Noto Serif SC（中文），降级到系统衬线
+        serif:  ['"Playfair Display"', '"Noto Serif SC"', '"Songti SC"', '"SimSun"', 'Georgia', '"Times New Roman"', 'serif'],
+        // 无衬线：Inter Tight（英文）+ 苹方/雅黑（中文系统），保证中文零依赖
+        sans:   ['"Inter Tight"', '"PingFang SC"', '"Microsoft YaHei"', '"Helvetica Neue"', 'Arial', 'system-ui', 'sans-serif'],
+        // 等宽：JetBrains Mono，降级到系统等宽
+        mono:   ['"JetBrains Mono"', '"SF Mono"', 'Menlo', 'Consolas', '"Courier New"', 'monospace'],
+        // 霓虹蛇主题字体（Orbitron/Rajdhani/Share Tech Mono 有独立 @font-face）
+        display:['"Orbitron"', 'system-ui', 'sans-serif'],
+        tech:   ['"Share Tech Mono"', 'Menlo', 'Consolas', 'monospace'],
+        rajdhani:['"Rajdhani"', '"Inter Tight"', 'system-ui', 'sans-serif'],
       },
       animation: {
         'spin-slow': 'spin 40s linear infinite',

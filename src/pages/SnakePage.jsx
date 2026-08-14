@@ -935,11 +935,11 @@ export default function SnakePage() {
 
   return (
     <div className="snake-page">
-      {/* 字体加载（原 head 中的 Google Fonts）*/}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      {/* 字体加载（国内镜像，避免 gstatic.com 被墙）*/}
+      <link rel="preconnect" href="https://fonts.font.im" />
+      <link rel="preconnect" href="https://gstatic.font.im" crossOrigin="anonymous" />
       <link
-        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap"
+        href="https://fonts.font.im/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap"
         rel="stylesheet"
       />
 

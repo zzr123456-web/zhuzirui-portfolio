@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== 字体加载说明 =====
+   使用 fonts.font.im 镜像（Google Fonts 国内可用替代）
+   所有字体链接带 &display=swap 参数，防止文字在字体加载前不可见（FOIT）
+   以下 Tailwind fontFamily 配置了完善的系统字体降级链，
+   即使 CDN 完全不可用，中文仍可用苹方/微软雅黑/宋体显示，英文用 system-ui */
+
 /* ===== 全局基础 ===== */
 * {
   box-sizing: border-box;
